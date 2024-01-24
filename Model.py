@@ -126,6 +126,19 @@ class CLMP(nn.Module):
         
         return visual_cls_representation, audio_cls_representation, va_fusion_cls_representation
     
+class CLMPWithClassifier(nn.Module):
+    def __init__(self, clmp_model, num_classes):
+        super(CLMPWithClassifier, self).__init__()
+        self.clmp_model = clmp_model  # 預訓練模型
+        self.classifier = nn.Linear(clmp_model.embedding_dim, num_classes)  # 分類頭
+
+    def forward(self, visual_feature, audio_feature, mask):
+        # 使用原始模型的forward方法
+        visual_cls_representation, audio_cls_representation, va_fusion_cls_representation = self.clmp_model(visual_feature, audio_feature, mask)
+        
+        # 使用分類頭
+        logits = self.classifier(va_fusion_cls_representation)
+        return logits
 
 # import numpy as np
 # from torch.cuda.amp import autocast

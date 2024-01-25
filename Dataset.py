@@ -30,11 +30,15 @@ def collate_fn(batch):
     
     media_mask = np.where(np.all(collated_batch['visual_feature'].numpy() == 0, axis=2), True, False)
     media_mask = torch.from_numpy(media_mask)
-    
-    genres_mask = np.where(np.all(collated_batch['genres_feature'].numpy() == 0, axis=2), True, False)
-    genres_mask = torch.from_numpy(genres_mask)
     collated_batch['media_mask'] = media_mask
-    collated_batch['genres_mask'] = genres_mask
+    if 'genres_feature' in collated_batch:
+        genres_mask = np.where(np.all(collated_batch['genres_feature'].numpy() == 0, axis=2), True, False)
+        genres_mask = torch.from_numpy(genres_mask)
+        collated_batch['genres_mask'] = genres_mask
+        
+    if 'class_id' in collated_batch:
+        collated_batch['class_id'] = np.array([item[0] for item in collated_batch['class_id']])
+        collated_batch['class_id'] = torch.from_numpy(collated_batch['class_id'])
     
     return collated_batch
 

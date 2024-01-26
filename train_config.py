@@ -68,7 +68,7 @@ lr_scheduler = initialize_component(config_components['lr_scheduler'], optim.lr_
 
 dg_contrastive_loss = initialize_component(config_components['loss'], Loss, config_components['loss']['args'])
 
-early_stopper = EarlyStopping(patience=100)
+early_stopper = EarlyStopping(patience=1000)
 
 for epoch in range(config_components['trainer']['args']['epochs']):
     progress_bar = tqdm(total=len(training_dataloader), desc=f'Epoch {epoch + 1}')
@@ -130,7 +130,7 @@ for epoch in range(config_components['trainer']['args']['epochs']):
         print(f"Validation - Loss: {val_average_loss:.4f}")   
         writer.add_scalar('Loss/Validation Loss', val_average_loss, epoch+1)
 
-    early_stopper(val_loss, model, os.path.join(config_dir, 'check_point.pth'))
+    early_stopper(val_average_loss, model, os.path.join(config_dir, 'check_point.pth'))
 
     if early_stopper.early_stop:
         print(f"Early stopping triggered epoch:{epoch+1}")

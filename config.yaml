@@ -12,7 +12,7 @@ data_loader:
   type: DataLoader
   args:
     batch_size: 64
-    shuffle: false
+    shuffle: true
 
 model:
   type: CLMP
@@ -20,7 +20,7 @@ model:
     embedding_dim: 512
     num_heads: 4
     ff_hidden_dim: 1024
-    num_block: 2 
+    num_block: 2
     dropout: 0.1
     max_len: 600
 

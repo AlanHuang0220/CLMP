@@ -1,7 +1,7 @@
 import pickle
-from dataset import CustomDataset, collate_fn
+from Dataset import CustomDataset, collate_fn
 from torch.utils.data import DataLoader
-from model import CLMP
+from Model import CLMP
 import torch
 import torch.nn.functional as F
 import clip

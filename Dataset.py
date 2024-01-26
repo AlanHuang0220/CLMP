@@ -21,7 +21,10 @@ class CustomDataset(Dataset):
 def collate_fn(batch):
     collated_batch = {}
     for key in list(batch[0].keys()):
-        if key.endswith('feature'):
+        if key in ['class_id', 'view_count', 'like_count', 'dislike_count']:
+            collated_batch[key] = np.array([item[key] for item in batch])
+            collated_batch[key] = torch.from_numpy(collated_batch[key])
+        elif key.endswith('feature'):
             features = [torch.from_numpy(item[key]) for item in batch]
             features_padded = torch.nn.utils.rnn.pad_sequence(features, batch_first=True, padding_value=0)
             collated_batch[key] = features_padded
@@ -35,18 +38,16 @@ def collate_fn(batch):
         genres_mask = np.where(np.all(collated_batch['genres_feature'].numpy() == 0, axis=2), True, False)
         genres_mask = torch.from_numpy(genres_mask)
         collated_batch['genres_mask'] = genres_mask
-        
-    if 'class_id' in collated_batch:
-        collated_batch['class_id'] = np.array([item[0] for item in collated_batch['class_id']])
-        collated_batch['class_id'] = torch.from_numpy(collated_batch['class_id'])
-    
+
     return collated_batch
 
 
-# pkl_files = ['tt0006864.pkl', 'tt0015724.pkl']
+# pkl_files = '/home/miislab-server/Alan/Alan_shared/LVU/feature/year/val'
+# pkl_files = '/home/miislab-server/Alan/Alan_shared/MovieNet/feature'
 # dataset = CustomDataset(pkl_files)
 # dataloader = DataLoader(dataset, batch_size=32, shuffle=False, collate_fn=collate_fn)
 
 # for batch in dataloader:
 #     print(batch.keys())
+    # print(batch['like_count'].shape)
     

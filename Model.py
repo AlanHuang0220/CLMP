@@ -85,8 +85,9 @@ class ExternalFusionBlock(nn.Module):
         return visual_output, audio_output
 
 class CLMP(nn.Module):
-    def __init__(self, embedding_dim, num_heads, ff_hidden_dim, num_block=1, dropout=0.1, max_len=600):
+    def __init__(self, embedding_dim=512, num_heads=4, ff_hidden_dim=1024, num_block=2, dropout=0.0, max_len=600):
         super(CLMP, self).__init__()
+        self.embedding_dim = embedding_dim
         
         self.visual_cls_token = nn.Parameter(torch.randn(1, 1, embedding_dim))
         self.audio_cls_token = nn.Parameter(torch.randn(1, 1, embedding_dim))
@@ -126,19 +127,19 @@ class CLMP(nn.Module):
         
         return visual_cls_representation, audio_cls_representation, va_fusion_cls_representation
     
-class CLMPWithClassifier(nn.Module):
-    def __init__(self, clmp_model, num_classes):
-        super(CLMPWithClassifier, self).__init__()
+class CLMPWithHead(nn.Module):
+    def __init__(self, clmp_model, output_dim):
+        super(CLMPWithHead, self).__init__()
         self.clmp_model = clmp_model  # 預訓練模型
-        self.classifier = nn.Linear(clmp_model.embedding_dim, num_classes)  # 分類頭
+        self.classifier = nn.Linear(clmp_model.embedding_dim, output_dim)  # 回歸或是分類頭
 
     def forward(self, visual_feature, audio_feature, mask):
         # 使用原始模型的forward方法
         visual_cls_representation, audio_cls_representation, va_fusion_cls_representation = self.clmp_model(visual_feature, audio_feature, mask)
         
         # 使用分類頭
-        logits = self.classifier(va_fusion_cls_representation)
-        return logits
+        output = self.classifier(va_fusion_cls_representation)
+        return output
 
 # import numpy as np
 # from torch.cuda.amp import autocast

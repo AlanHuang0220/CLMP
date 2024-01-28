@@ -130,7 +130,7 @@ for epoch in range(config_components['trainer']['args']['epochs']):
         print(f"Validation - Loss: {val_average_loss:.4f}")   
         writer.add_scalar('Loss/Validation Loss', val_average_loss, epoch+1)
 
-    early_stopper(val_average_loss, model, os.path.join(config_dir, 'check_point.pth'))
+    early_stopper(average_loss, val_average_loss, model, os.path.join(config_dir, 'model'))
 
     if early_stopper.early_stop:
         print(f"Early stopping triggered epoch:{epoch+1}")

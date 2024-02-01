@@ -1,3 +1,4 @@
 logs/
 pretrain_weight/
 finetune_weight/
+training_weight/

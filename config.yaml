@@ -13,6 +13,7 @@ data_loader:
   args:
     batch_size: 64
     shuffle: true
+    num_workers: 8
 
 model:
   type: CLMP
@@ -37,7 +38,7 @@ lr_scheduler:
 loss:
   type: DescriptionWithGenresContrastiveLoss
   args:
-    temperature: 0.1  
+    temperature: 0.08  
     v_d_weight: 1
     a_d_weight: 1 
     va_d_weight: 1 

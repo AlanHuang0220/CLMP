@@ -94,6 +94,9 @@ class DescriptionWithGenresContrastiveLoss(nn.Module):
         genre_loss = self.genres_contrastive_loss(visual_feature, audio_feature, va_fusion_feature, genres_feature)
         
         return description_loss + genre_loss
+    
+# class FinalLoss(nn.Module):
+#      def __init__(self, temperature=0.1,  v_d_weight=1, a_d_weight=1, va_d_weight=1, v_g_weight=1, a_g_weight=1, va_g_weight=1):
 
 # class MultiLabelInfoNCE(nn.Module):
 #     def __init__(self, temperature=0.1):

@@ -7,6 +7,7 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 from training_helpers import EarlyStopping
 from tensorboardX import SummaryWriter
+import numpy as np
 
 def normalization(input, max, min):
     output = (input - min) / (max - min)
@@ -21,12 +22,14 @@ def train(task, model, dataloader, criterion, optimizer, progress_bar, device):
         mask = batch['media_mask'].to(device)
         
         if task == 'like_ratio':
-            like_count = normalization(batch['like_count'], 853196, 18595)
-            dislike_count = normalization(batch['dislike_count'], 18595, 359)
-            label = torch.cat((like_count, dislike_count), dim=1).to(device).float()
+            like, dislike = batch['like_count'].to(device).float(), batch['dislike_count'].to(device).float()
+            label = like / (like + dislike) * 10.0
+            label -= 9.138220535629456 # make zero-mean
+            
         elif task == 'view_count':
-            view_count = normalization(batch['view_count'], 103520351, 531)
-            label = view_count.to(device).float()
+            label = torch.log(batch['view_count'].float()).to(device)
+            label -= 11.76425435683139 # make zero-mean
+            
         else:
             label = batch['class_id'].to(device).squeeze(1)
         # print(label)
@@ -58,12 +61,13 @@ def validate(task, model, val_loader, criterion, device):
             mask = batch['media_mask'].to(device)
             
             if task == 'like_ratio':
-                like_count = normalization(batch['like_count'], 853196, 18595)
-                dislike_count = normalization(batch['dislike_count'], 18595, 359)
-                label = torch.cat((like_count, dislike_count), dim=1).to(device).float()
+                like, dislike = batch['like_count'].to(device).float(), batch['dislike_count'].to(device).float()
+                label = like / (like + dislike) * 10.0
+                label -= 9.138220535629456 # make zero-mean
+                
             elif task == 'view_count':
-                view_count = normalization(batch['view_count'], 103520351, 531)
-                label = view_count.to(device).float()
+                label = torch.log(batch['view_count'].float()).to(device)
+                label -= 11.76425435683139 # make zero-mean
             else:
                 label = batch['class_id'].to(device).squeeze(1)
             
@@ -80,7 +84,9 @@ dataset_root = '/home/miislab-server/Alan/Alan_shared/LVU/feature'
 total_epochs = 10000
 # init pretrain model
 pretrained_model = CLMP()
-pretrained_model.load_state_dict(torch.load('pretrain_weight/2024-01-24_19-40-47/check_point.pth'))  # load pretrain weight
+pretrained_model.load_state_dict(torch.load('training_weight/2024-01-31_13-56-12/model_best_val.pth'))  # load pretrain weight
+total_params = sum(p.numel() for p in pretrained_model.parameters() if p.requires_grad)
+print(f"Total number of parameters: {total_params}")
 
 # 故定預訓練模型權重
 for param in pretrained_model.parameters():
@@ -96,7 +102,7 @@ tasks = {
     'writer': {'output_dim': 10, 'type': 'classification'},
     'year': {'output_dim': 9, 'type': 'classification'},
     
-    'like_ratio': {'output_dim': 2, 'type': 'regression'},
+    'like_ratio': {'output_dim': 1, 'type': 'regression'},
     'view_count': {'output_dim': 1, 'type': 'regression'},
 }
 

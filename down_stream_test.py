@@ -22,12 +22,14 @@ def test(task, model, test_loader, metric, device):
             mask = batch['media_mask'].to(device)
             
             if task == 'like_ratio':
-                like_count = normalization(batch['like_count'], 853196, 18595)
-                dislike_count = normalization(batch['dislike_count'], 18595, 359)
-                label = torch.cat((like_count, dislike_count), dim=1).to(device).float()
+                like, dislike = batch['like_count'].to(device).float(), batch['dislike_count'].to(device).float()
+                label = like / (like + dislike) * 10.0
+                label -= 9.138220535629456 # make zero-mean
+                
             elif task == 'view_count':
-                view_count = normalization(batch['view_count'], 103520351, 531)
-                label = view_count.to(device).float()
+                label = torch.log(batch['view_count'].float()).to(device)
+                label -= 11.76425435683139 # make zero-mean
+                
             else:
                 label = batch['class_id'].to(device).squeeze(1)
             
@@ -51,17 +53,17 @@ tasks = {
     'writer': {'output_dim': 10, 'type': 'classification'},
     'year': {'output_dim': 9, 'type': 'classification'},
     
-    'like_ratio': {'output_dim': 2, 'type': 'regression'},
+    'like_ratio': {'output_dim': 1, 'type': 'regression'},
     'view_count': {'output_dim': 1, 'type': 'regression'},
 }
-
+l=[]
 for task_name, task_info in tasks.items():
     testing_dataset = CustomDataset(f"{dataset_root}/{task_name}/test")
     
     testing_dataloader = DataLoader(dataset=testing_dataset, batch_size=64, shuffle=False, collate_fn=collate_fn)
     
     model = CLMPWithHead(pretrained_model, output_dim=task_info['output_dim'])
-    model_weight = torch.load(f'finetune_weight/{task_name}_best_val.pth')
+    model_weight = torch.load(f'finetune_weight/pretrain+genreloss+descriptionloss_val_best/{task_name}_best_val.pth')
     model.load_state_dict(model_weight)
     model.to(device)
     
@@ -72,6 +74,9 @@ for task_name, task_info in tasks.items():
         metric = nn.MSELoss()
     
     test_result = test(task_name, model, testing_dataloader, metric, device)
-
+    l.append(test_result)
     print(f"task_name: {task_name}, result: {test_result}")
-            
+
+print(sum(l[0:3]) / 3)
+print(sum(l[3:7]) / 4)
+print(sum(l[7:9]) / 2)

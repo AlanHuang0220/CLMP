@@ -68,7 +68,7 @@ lr_scheduler = initialize_component(config_components['lr_scheduler'], optim.lr_
 
 dg_contrastive_loss = initialize_component(config_components['loss'], Loss, config_components['loss']['args'])
 
-early_stopper = EarlyStopping(patience=1000)
+early_stopper = EarlyStopping(patience=50)
 
 for epoch in range(config_components['trainer']['args']['epochs']):
     progress_bar = tqdm(total=len(training_dataloader), desc=f'Epoch {epoch + 1}')

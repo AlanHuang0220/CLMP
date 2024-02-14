@@ -95,6 +95,40 @@ class DescriptionWithGenresContrastiveLoss(nn.Module):
         
         return description_loss + genre_loss
     
+class CyclicLoss(nn.Module):
+    def __init__(self, inmodel_weight=1):
+        super(CyclicLoss, self).__init__()
+        self.inmodel_weight = inmodel_weight
+        # self.crossmodel_weight = crossmodel_weight
+        
+    def forward(self, visual_feature, audio_feature):
+        inmodal_cyclic_loss = torch.tensor(0)
+         # 標準化特徵向量
+        visual_feature = F.normalize(visual_feature, dim=1)
+        audio_feature = F.normalize(audio_feature, dim=1)
+
+        # 計算相似度矩陣
+        visual_logits = torch.matmul(visual_feature, visual_feature.T)
+        audio_logits = torch.matmul(audio_feature, audio_feature.T)
+        
+        inmodal_cyclic_loss = (visual_logits - audio_logits).square().mean() * len(visual_feature)
+        return self.inmodel_weight * inmodal_cyclic_loss
+        
+class CombinedLoss(nn.Module):
+    def __init__(self, temperature=0.1, v_d_weight=1, a_d_weight=1, va_d_weight=1, v_g_weight=1, a_g_weight=1, va_g_weight=1, inmodel_weight=1):
+        super(CombinedLoss, self).__init__()
+        self.description_with_genres_contrastive_loss = DescriptionWithGenresContrastiveLoss(temperature, v_d_weight, a_d_weight, va_d_weight, v_g_weight, a_g_weight, va_g_weight)
+        self.cyclic_loss = CyclicLoss(inmodel_weight)
+        
+    def forward(self, visual_feature, audio_feature, va_fusion_feature, description_feature, genres_feature):
+        description_and_genres_loss = self.description_with_genres_contrastive_loss(visual_feature, audio_feature, va_fusion_feature, description_feature, genres_feature)
+        
+        # 計算cyclic loss
+        cyclic_loss = self.cyclic_loss(visual_feature, audio_feature)
+        
+        # 將兩個損失合併
+        total_loss = description_and_genres_loss + cyclic_loss
+        return total_loss
 # class FinalLoss(nn.Module):
 #      def __init__(self, temperature=0.1,  v_d_weight=1, a_d_weight=1, va_d_weight=1, v_g_weight=1, a_g_weight=1, va_g_weight=1):
 
@@ -169,70 +203,70 @@ class DescriptionWithGenresContrastiveLoss(nn.Module):
 #         return genres_loss
     
 
-# class GenresLabelContrastiveLoss(nn.Module):
-#     def __init__(self, temperature=0.1):
-#         super(GenresLabelContrastiveLoss, self).__init__()
+class GenresLabelContrastiveLoss(nn.Module):
+    def __init__(self, temperature=0.1):
+        super(GenresLabelContrastiveLoss, self).__init__()
         
-#         self.learnable_weight = nn.Parameter(torch.tensor(1.0))
+        # self.learnable_weight = nn.Parameter(torch.tensor(1.0))
         
-#     def _labels_to_one_hot(self, labels: List[List[int]], num_classes):
-#         """
-#         將multi label 轉換成 one-hot vector
+    def _labels_to_one_hot(self, labels: List[List[int]], num_classes):
+        """
+        將multi label 轉換成 one-hot vector
         
-#         :param labels: genres label list
-#         :param num_classes: 總類別數
-#         :return: one-hot vector
-#         """
-#         batch_size = len(labels)
+        :param labels: genres label list
+        :param num_classes: 總類別數
+        :return: one-hot vector
+        """
+        batch_size = len(labels)
 
-#         one_hot_tensor = torch.zeros(batch_size, num_classes)
+        one_hot_tensor = torch.zeros(batch_size, num_classes)
 
-#         for i, label_list in enumerate(labels):
-#             one_hot_tensor[i, label_list] = 1
+        for i, label_list in enumerate(labels):
+            one_hot_tensor[i, label_list] = 1
 
-#         return one_hot_tensor
+        return one_hot_tensor
         
-#     def _jaccard_similarity_tensor(self, binary_matrix):
-#         # 計算交集,聯集
-#         intersection = torch.mm(binary_matrix, binary_matrix.t())
-#         total = binary_matrix.sum(dim=1).unsqueeze(1)
-#         union = total + total.t() - intersection
+    def _jaccard_similarity_tensor(self, binary_matrix):
+        # 計算交集,聯集
+        intersection = torch.mm(binary_matrix, binary_matrix.t())
+        total = binary_matrix.sum(dim=1).unsqueeze(1)
+        union = total + total.t() - intersection
 
-#         # 計算 Jaccard 
-#         jaccard = intersection / union
-#         jaccard.fill_diagonal_(0)
+        # 計算 Jaccard 
+        jaccard = intersection / union
+        jaccard.fill_diagonal_(0)
         
-#         return jaccard
+        return jaccard
     
-#     def _extract_elements(self, tensor, index):
-#         result = []
-#         for pair in index:
-#             # Exclude the elements at the specified indices
-#             indices_to_keep = [i for i in range(tensor.shape[1]) if i not in pair]
-#             result.append(tensor[pair[0], indices_to_keep])
-#         return torch.stack(result)
+    def _extract_elements(self, tensor, index):
+        result = []
+        for pair in index:
+            # Exclude the elements at the specified indices
+            indices_to_keep = [i for i in range(tensor.shape[1]) if i not in pair]
+            result.append(tensor[pair[0], indices_to_keep])
+        return torch.stack(result)
     
-#     def forward(self, va_fusion_feature, genres_label):
-#         # print(genres_label)
-#         one_hot_label = self._labels_to_one_hot(genres_label, 30)
+    def forward(self, va_fusion_feature, genres_label):
+        # print(genres_label)
+        one_hot_label = self._labels_to_one_hot(genres_label, 30)
             
-#         jaccard_sim = self._jaccard_similarity_tensor(one_hot_label).to(va_fusion_feature.device)
+        jaccard_sim = self._jaccard_similarity_tensor(one_hot_label).to(va_fusion_feature.device)
         
-#         va_fusion_feature = F.normalize(va_fusion_feature, dim=1)
-#         similarity_matrix = torch.matmul(va_fusion_feature, va_fusion_feature.T)
-#         # similarity_matrix = similarity_matrix / (0.1 * jaccard_sim + 1e-10)
-#         # print(similarity_matrix)
-#         # similarity_matrix = self.sigmoid(similarity_matrix)
-#         indices = torch.nonzero(jaccard_sim)
-#         positive = similarity_matrix[indices[:,0], indices[:,1]].unsqueeze(1)
-#         negative = self._extract_elements(similarity_matrix, indices)
-#         logits = torch.cat([positive,negative], dim=1)
-#         labels = torch.zeros(logits.size(0), dtype=torch.long).to(va_fusion_feature.device)
-#         # print(logits, labels)
-#         loss = F.cross_entropy(logits / 0.1, labels)
+        va_fusion_feature = F.normalize(va_fusion_feature, dim=1)
+        similarity_matrix = torch.matmul(va_fusion_feature, va_fusion_feature.T)
+        similarity_matrix = similarity_matrix /0.1 * (1 - (jaccard_sim))
+        # print(similarity_matrix)
+        # similarity_matrix = self.sigmoid(similarity_matrix)
+        indices = torch.nonzero(jaccard_sim)
+        positive = similarity_matrix[indices[:,0], indices[:,1]].unsqueeze(1)
+        negative = self._extract_elements(similarity_matrix, indices)
+        logits = torch.cat([positive,negative], dim=1)
+        labels = torch.zeros(logits.size(0), dtype=torch.long).to(va_fusion_feature.device)
+        # print(logits, labels)
+        loss = F.cross_entropy(logits, labels)
         
-#         # genres_loss = F.binary_cross_entropy(similarity_matrix, jaccard_sim.to(similarity_matrix.device))
+        # genres_loss = F.binary_cross_entropy(similarity_matrix, jaccard_sim.to(similarity_matrix.device))
 
-#         return loss
+        return loss
     
 

@@ -84,7 +84,7 @@ dataset_root = '/home/miislab-server/Alan/Alan_shared/LVU/feature'
 total_epochs = 10000
 # init pretrain model
 pretrained_model = CLMP()
-pretrained_model.load_state_dict(torch.load('training_weight/2024-01-31_13-56-12/model_best_val.pth'))  # load pretrain weight
+pretrained_model.load_state_dict(torch.load('training_weight/2024-02-14_00-11-27/model_best_val.pth'))  # load pretrain weight
 total_params = sum(p.numel() for p in pretrained_model.parameters() if p.requires_grad)
 print(f"Total number of parameters: {total_params}")
 
@@ -112,7 +112,7 @@ for task_name, task_info in tasks.items():
     val_dataset = CustomDataset(f"{dataset_root}/{task_name}/val")
     testing_dataset = CustomDataset(f"{dataset_root}/{task_name}/test")
     
-    training_dataloader = DataLoader(dataset=training_dataset, batch_size=64, shuffle=True, collate_fn=collate_fn)
+    training_dataloader = DataLoader(dataset=training_dataset, batch_size=256, shuffle=True, collate_fn=collate_fn,num_workers=16)
     val_dataloader = DataLoader(dataset=val_dataset, batch_size=64, shuffle=False, collate_fn=collate_fn)
     testing_dataloader = DataLoader(dataset=testing_dataset, batch_size=64, shuffle=False, collate_fn=collate_fn)
     
@@ -124,7 +124,7 @@ for task_name, task_info in tasks.items():
         criterion = nn.CrossEntropyLoss()
     else:
         criterion = nn.MSELoss()
-    optimizer = optim.Adam(model.parameters(), lr=0.001)
+    optimizer = optim.Adam(model.parameters(), lr=0.1)
     
     early_stopper = EarlyStopping(patience=50)
     

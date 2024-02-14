@@ -63,7 +63,7 @@ for task_name, task_info in tasks.items():
     testing_dataloader = DataLoader(dataset=testing_dataset, batch_size=64, shuffle=False, collate_fn=collate_fn)
     
     model = CLMPWithHead(pretrained_model, output_dim=task_info['output_dim'])
-    model_weight = torch.load(f'finetune_weight/pretrain+genreloss+descriptionloss_val_best/{task_name}_best_val.pth')
+    model_weight = torch.load(f'finetune_weight/cyclicloss/{task_name}_best_val.pth')
     model.load_state_dict(model_weight)
     model.to(device)
     

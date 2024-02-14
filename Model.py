@@ -137,7 +137,6 @@ class CLMPWithHead(nn.Module):
         # 使用原始模型的forward方法
         visual_cls_representation, audio_cls_representation, va_fusion_cls_representation = self.clmp_model(visual_feature, audio_feature, mask)
         
-        # 使用分類頭
         output = self.classifier(va_fusion_cls_representation)
         return output
 

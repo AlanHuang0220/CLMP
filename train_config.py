@@ -85,9 +85,8 @@ for epoch in range(config_components['trainer']['args']['epochs']):
         
         visual_output, audio_output, va_fusion_output = model(visual_feature, audio_feature, mask)
         
-        # loss = dg_contrastive_loss(visual_output, audio_output, va_fusion_output, description_feature, genres_feature)
         loss = dg_contrastive_loss(visual_output, audio_output, va_fusion_output, description_feature, genres_feature)
-        # Backward pass and optimize
+        # loss = dg_contrastive_loss(va_fusion_output, genres_label)
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
@@ -124,6 +123,7 @@ for epoch in range(config_components['trainer']['args']['epochs']):
             visual_output, audio_output, va_fusion_output = model(visual_feature, audio_feature, mask)
             
             val_loss = dg_contrastive_loss(visual_output, audio_output, va_fusion_output, description_feature, genres_feature)
+            # val_loss = dg_contrastive_loss(va_fusion_output, genres_label)
             val_running_loss += val_loss.item()
         
         val_average_loss = val_running_loss / len(val_dataloader)    
